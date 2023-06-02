@@ -1,0 +1,20 @@
+[
+  {
+    "key": 1,
+    "name": "fadel",
+    "age": "21",
+    "address": "jakarta"
+  },
+  {
+    "key": 2,
+    "name": "raihan",
+    "age": "23",
+    "address": "bandung"
+  },
+  {
+    "key": 3,
+    "name": "bintang",
+    "age": "20",
+    "address": "lampung"
+  }
+]
