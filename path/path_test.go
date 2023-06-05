@@ -11,6 +11,11 @@ func TestPath(t *testing.T) {
 		t.Fatal("expecting error")
 	}
 
+	c, err = Verify("../../../../../../root/.ssh/authorized_keys", trustedRoot)
+	if err == nil {
+		t.Fatal("expecting error")
+	}
+
 	c, err = Verify("data.csv", trustedRoot)
 	if err == nil {
 		t.Fatal("expecting error")

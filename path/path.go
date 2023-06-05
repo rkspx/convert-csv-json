@@ -13,11 +13,11 @@ import (
 func Verify(path, trustedRoot string) (string, error) {
 	r, err := filepath.EvalSymlinks(path)
 	if err != nil {
-		return path, fmt.Errorf("eval failed: %s (%T)", err, err)
+		return "", fmt.Errorf("eval failed: %s", err)
 	}
 
 	if err := IsInTrustedRoot(r, trustedRoot); err != nil {
-		return path, err
+		return "", err
 	}
 
 	return r, nil
@@ -44,13 +44,12 @@ func IsInTrustedRoot(path, trustedRoot string) error {
 // SafelyOpenFile safely opens a file. SafelyOpenFile do a sanitization and trustedRoot checking against the given
 // path first before opening the file.
 func SafelyOpenFile(path, trustedRoot string) (io.ReadCloser, error) {
-	var err error
-	path, err = Verify(path, trustedRoot)
+	safePath, err := Verify(path, trustedRoot)
 	if err != nil {
 		return nil, err
 	}
 
-	f, err := os.Open(path)
+	f, err := os.Open(safePath)
 	if err != nil {
 		return nil, fmt.Errorf("can not open file, %s", err)
 	}
@@ -61,14 +60,13 @@ func SafelyOpenFile(path, trustedRoot string) (io.ReadCloser, error) {
 // SafelyCreateFile safely create a file. SafelyCreateFile do a sanitization and trustedRoot checking against the given
 // path first before opening the file. WARNING: this overrides the file if it already exists!.
 func SafelyCreateFile(path, trustedRoot string) (io.WriteCloser, error) {
-	path = filepath.Clean(path)
-
-	err := IsInTrustedRoot(path, trustedRoot)
+	cleanedPath := filepath.Clean(path)
+	err := IsInTrustedRoot(cleanedPath, trustedRoot)
 	if err != nil {
 		return nil, err
 	}
 
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	f, err := os.OpenFile(cleanedPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	if err != nil {
 		return nil, fmt.Errorf("can not open file, %s", err)
 	}
