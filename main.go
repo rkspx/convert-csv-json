@@ -5,7 +5,14 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"log"
 	"os"
+
+	"github.com/fadellmuhammad/convert-csv-json.git/path"
+)
+
+const (
+	trustedRoot = "data"
 )
 
 func main() {
@@ -35,67 +42,67 @@ func main() {
 
 	switch selectFunc {
 	case "tojson":
-		toJson(inputFile, outputFileName)
+		if err := toJSON(inputFile, outputFileName); err != nil {
+			log.Fatalf("Error: %s", err)
+		}
 	case "tocsv":
-		toCsv(inputFile, outputFileName)
+		if err := toCSV(inputFile, outputFileName); err != nil {
+			log.Fatalf("Error: %s", err)
+		}
 	}
 
 }
 
-func toJson(inputFile, outputFileName string) {
-		// Buka file CSV
-		csvFile, err := os.Open(inputFile)
-		if err != nil {
-			fmt.Println("Error:", err)
-			return
+func toJSON(inputFile, outputFileName string) error {
+	// Buka file CSV
+	csvFile, err := path.SafelyOpenFile(inputFile, trustedRoot)
+	if err != nil {
+		return fmt.Errorf("can not open file '%s', %s", inputFile, err)
+	}
+	defer csvFile.Close()
+
+	// Membaca data CSV
+	reader := csv.NewReader(csvFile)
+	csvData, err := reader.ReadAll()
+	if err != nil {
+		return err
+	}
+
+	// Mengonversi data CSV menjadi JSON
+	jsonData := make([]map[string]string, 0)
+	headers := csvData[0]
+	for _, row := range csvData[1:] {
+		record := make(map[string]string)
+		for i, value := range row {
+			record[headers[i]] = value
 		}
-		defer csvFile.Close()
-	
-		// Membaca data CSV
-		reader := csv.NewReader(csvFile)
-		csvData, err := reader.ReadAll()
-		if err != nil {
-			fmt.Println("Error:", err)
-			return
-		}
-	
-		// Mengonversi data CSV menjadi JSON
-		jsonData := make([]map[string]string, 0)
-		headers := csvData[0]
-		for _, row := range csvData[1:] {
-			record := make(map[string]string)
-			for i, value := range row {
-				record[headers[i]] = value
-			}
-			jsonData = append(jsonData, record)
-		}
-	
-		// Membuka file JSON
-		jsonFile, err := os.Create(outputFileName)
-		if err != nil {
-			fmt.Println("Error:", err)
-			return
-		}
-		defer jsonFile.Close()
-	
-		// Menulis data JSON ke file
-		jsonEncoder := json.NewEncoder(jsonFile)
-		jsonEncoder.SetIndent("", "  ")
-		err = jsonEncoder.Encode(jsonData)
-		if err != nil {
-			fmt.Println("Error:", err)
-			return
-		}
-	
-		fmt.Println("Konversi CSV ke JSON selesai.")
+		jsonData = append(jsonData, record)
+	}
+
+	// Membuka file JSON
+	jsonFile, err := path.SafelyCreateFile(outputFileName, trustedRoot)
+	if err != nil {
+		return fmt.Errorf("can not create file '%s', %s", outputFileName, err)
+	}
+	defer jsonFile.Close()
+
+	// Menulis data JSON ke file
+	jsonEncoder := json.NewEncoder(jsonFile)
+	jsonEncoder.SetIndent("", "  ")
+	err = jsonEncoder.Encode(jsonData)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Konversi CSV ke JSON selesai.")
+	return nil
 }
 
-func toCsv(inputFile, outputFileName string) {
+func toCSV(inputFile, outputFileName string) error {
 	// Buka file JSON
-	jsonFile, err := os.Open(inputFile)
+	jsonFile, err := path.SafelyOpenFile(inputFile, trustedRoot)
 	if err != nil {
-		fmt.Println("Error:", err)
-		return
+		return err
 	}
 	defer jsonFile.Close()
 
@@ -104,8 +111,7 @@ func toCsv(inputFile, outputFileName string) {
 	jsonDecoder := json.NewDecoder(jsonFile)
 	err = jsonDecoder.Decode(&jsonData)
 	if err != nil {
-		fmt.Println("Error:", err)
-		return
+		return err
 	}
 
 	// Mendapatkan kolom header dari data JSON
@@ -117,10 +123,9 @@ func toCsv(inputFile, outputFileName string) {
 	}
 
 	// Membuka file CSV
-	csvFile, err := os.Create(outputFileName)
+	csvFile, err := path.SafelyCreateFile(outputFileName, trustedRoot)
 	if err != nil {
-		fmt.Println("Error:", err)
-		return
+		return err
 	}
 	defer csvFile.Close()
 
@@ -145,6 +150,7 @@ func toCsv(inputFile, outputFileName string) {
 	csvWriter.Flush()
 
 	fmt.Println("Konversi JSON ke CSV selesai.")
+	return nil
 }
 
 // Menampilkan bantuan
